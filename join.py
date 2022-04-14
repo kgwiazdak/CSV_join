@@ -89,25 +89,6 @@ class Join_csv:
                 i = -1
                 j = -1
 
-
-                # for element in inner_data_set:
-                #     data1_set.remove(element)
-                #     for ind, f1 in enumerate(data1):
-                #         if f1 == element:
-                #             i = ind
-                #             break
-                #     for ind, f2 in enumerate(data2):
-                #         if f2 == element:
-                #             j = ind
-                #             break
-                #     np.delete(data1, i)
-                #
-                #     row1 = first_file.iloc[i, 1:].values
-                #     row2 = second_file.iloc[j, left].values
-                #
-                #     new_data = np.concatenate((row1, row2))
-                #     data.append(new_data)
-
                 if self.join_type != "inner":
                     ll = len(left)
                     for element in first_file.iloc[:, 1:].values:
@@ -125,6 +106,25 @@ class Join_csv:
                             row2 = second_file.iloc[j, left].values
                             new_data = np.concatenate((element, row2))
                             data.append(new_data)
+                else:
+                    for element in inner_data_set:
+                        for ind, f1 in enumerate(data1):
+                            if f1 == element:
+                                i = ind
+                                break
+                        for ind, f2 in enumerate(data2):
+                            if f2 == element:
+                                j = ind
+                                break
+                        np.delete(data1, i)
+
+                        row1 = first_file.iloc[i, 1:].values
+                        row2 = second_file.iloc[j, left].values
+
+                        new_data = np.concatenate((row1, row2))
+                        data.append(new_data)
+                del data2
+            del data1
 
             if len(data) > self.BIG_NUMBER:
                 df = pd.DataFrame(data=data, columns=self.header_names)
