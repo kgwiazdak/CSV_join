@@ -3,15 +3,17 @@ import pandas as pd
 import os
 from sys import argv
 
+
 class Join_csv:
     def __init__(self, filename1, filename2, column_name, join_type):
+        assert join_type in ["inner", "rightjoin", "leftjoin"]
         self.filename1 = filename1
         self.filename2 = filename2
         self.column_name = column_name
         self.join_type = join_type
 
         # nr will be used to make files and join them
-        self.nr=0
+        self.nr = 0
 
         self.header_first, self.header_second = self.get_headers()
 
@@ -40,7 +42,8 @@ class Join_csv:
 
     # return two arrays of indexes that are common to both files
     def inner_header_indexes(self):
-        inner_index_first = [];inner_index_second = []
+        inner_index_first = []
+        inner_index_second = []
         for i, x in enumerate(self.header_first):
             if x in self.header_second:
                 inner_index_first.append(i)
@@ -49,29 +52,30 @@ class Join_csv:
 
     # construct final header and find indexes that are missing from header_second
     def header_and_left(self, iif, iis):
-        if self.join_type == "inner":
-            left = [i for i in range(len(self.header_second)) if i not in iis]
-            headers_names = [self.header_first + [self.header_second[i]] for i in left]
+        left = [i-1 for i in range(len(self.header_second)) if i not in iis]
+        headers_names = [self.header_first + [self.header_second[i]] for i in left][0]
+        assert self.column_name in headers_names
         return headers_names, left
 
     def join_files(self, arr):
         with open("merged_csv.csv", "a") as merged_files:
-            merged_files.write(",".join(self.header_names)+"\n")
+            merged_files.write(",".join(self.header_names) + "\n")
             for file in arr:
                 with open(file) as f:
                     f.readline()
                     merged_files.write(f.read())
                 os.remove(file)
 
-
     def main_function(self):
         data = []
-        arr= []
+        arr = []
         nr = 0
+        if self.join_type == "rightjoin":
+            self.filename1, self.filename2 = self.filename2, self.filename1
+
         first_index, second_index = self.index_column_name()
         inner_index_first, inner_index_second = self.inner_header_indexes()
         self.header_names, left = self.header_and_left(inner_index_first, inner_index_second)
-        self.header_names= self.header_names[0]
 
         for first_file in pd.read_csv(self.filename1, chunksize=self.BIG_NUMBER):
             data1 = first_file.iloc[:, first_index].values
@@ -82,25 +86,45 @@ class Join_csv:
                 data2_set.clear()
                 data2 = second_file.iloc[:, second_index].values
 
-                i=-1;j=-1
-                for element in inner_data_set:
-                    data1_set.remove(element)
-                    for ind, f1 in enumerate(data1):
-                        if f1 == element:
-                            i = ind
-                            break
-                    for ind, f2 in enumerate(data2):
-                        if f2 == element:
-                            j = ind
-                            break
-                    np.delete(data1, i)
+                i = -1
+                j = -1
 
-                    if self.join_type=="inner":
-                        row1 = first_file.iloc[i, 1:].values
-                        row2 = second_file.iloc[j, left].values
 
-                        new_data = np.concatenate((row1, row2))
-                        data.append(new_data)
+                # for element in inner_data_set:
+                #     data1_set.remove(element)
+                #     for ind, f1 in enumerate(data1):
+                #         if f1 == element:
+                #             i = ind
+                #             break
+                #     for ind, f2 in enumerate(data2):
+                #         if f2 == element:
+                #             j = ind
+                #             break
+                #     np.delete(data1, i)
+                #
+                #     row1 = first_file.iloc[i, 1:].values
+                #     row2 = second_file.iloc[j, left].values
+                #
+                #     new_data = np.concatenate((row1, row2))
+                #     data.append(new_data)
+
+                if self.join_type != "inner":
+                    ll = len(left)
+                    for element in first_file.iloc[:, 1:].values:
+                        el = element[first_index-1]
+                        if el not in inner_data_set:
+                            data11 = ["None" for _ in range(ll)]
+                            new_data = np.concatenate((element, data11))
+                            data.append(new_data)
+                        else:
+                            for ind, f2 in enumerate(data2):
+                                if f2 == el:
+                                    j = ind
+                                    break
+                            np.delete(data1, i)
+                            row2 = second_file.iloc[j, left].values
+                            new_data = np.concatenate((element, row2))
+                            data.append(new_data)
 
             if len(data) > self.BIG_NUMBER:
                 df = pd.DataFrame(data=data, columns=self.header_names)
@@ -109,7 +133,7 @@ class Join_csv:
                 arr.append(file)
                 nr += 1
                 data.clear()
-        if len(data)!=0:
+        if len(data) != 0:
             df = pd.DataFrame(data=data, columns=self.header_names)
             df.to_csv("help_file" + str(nr) + ".csv")
         self.join_files(arr)
@@ -119,5 +143,3 @@ class Join_csv:
 if __name__ == '__main__':
     jcsv = Join_csv(argv[1], argv[2], argv[3], argv[4])
     jcsv.main_function()
-
-
