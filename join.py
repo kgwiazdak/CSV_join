@@ -5,10 +5,10 @@ from sys import argv
 
 
 class Join_csv:
-    def __init__(self, filename1, filename2, column_name, join_type="outer"):
+    def __init__(self, filename1, filename2, column_name, join_type="inner"):
         assert os.path.isfile(filename1)
         assert os.path.isfile(filename2)
-        assert join_type in ["inner", "rightjoin", "leftjoin", "outer"]
+        assert join_type in ["inner", "rightjoin", "leftjoin"]
         self.filename1 = filename1
         self.filename2 = filename2
         self.column_name = column_name
