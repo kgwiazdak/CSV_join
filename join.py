@@ -15,7 +15,7 @@ class Join_csv:
         # headers of the csv files
         self.header_first, self.header_second = self.get_headers()
 
-        self.BIG_NUMBER = 100
+        self.BIG_NUMBER = 1000000
 
     # return header from first and second file
     def get_headers(self):
@@ -51,7 +51,7 @@ class Join_csv:
     # construct final header and find indexes that are missing from header_second, also check if column name is valid
     def header_and_left(self, iif, iis):
         left = [i-1 for i in range(len(self.header_second)) if i not in iis]
-        headers_names = [self.header_first + [self.header_second[i]] for i in left][0]
+        headers_names = [self.header_first + [self.header_second[i+1]] for i in left][0]
         assert self.column_name in headers_names
         return headers_names, left
 
@@ -103,7 +103,7 @@ class Join_csv:
                 if self.join_type != "inner":
                     ll = len(left)
                     # we iterate through all the values from one file and if row is not in second file we fill missing columns with "None"
-                    for element in first_file.iloc[:, 1:].values:
+                    for i,element in enumerate(first_file.iloc[:, 1:].values):
                         el = element[first_index-1]
                         if el not in inner_data_set:
                             data11 = ["None" for _ in range(ll)]
@@ -154,7 +154,10 @@ class Join_csv:
                 data.clear()
         if len(data) != 0:
             df = pd.DataFrame(data=data, columns=self.header_names)
-            df.to_csv("help_file" + str(nr) + ".csv")
+            file="help_file" + str(nr) + ".csv"
+            df.to_csv(file)
+            arr.append(file)
+            data.clear()
         self.join_files(arr)
         return "merged_files.csv"
 
