@@ -12,9 +12,7 @@ class Join_csv:
         self.column_name = column_name
         self.join_type = join_type
 
-        # nr will be used to make files and join them
-        self.nr = 0
-
+        # headers of the csv files
         self.header_first, self.header_second = self.get_headers()
 
         self.BIG_NUMBER = 100
@@ -50,13 +48,14 @@ class Join_csv:
                 inner_index_second.append(self.header_second.index(x))
         return inner_index_first, inner_index_second
 
-    # construct final header and find indexes that are missing from header_second
+    # construct final header and find indexes that are missing from header_second, also check if column name is valid
     def header_and_left(self, iif, iis):
         left = [i-1 for i in range(len(self.header_second)) if i not in iis]
         headers_names = [self.header_first + [self.header_second[i]] for i in left][0]
         assert self.column_name in headers_names
         return headers_names, left
 
+    # join all help files to one big file "merged_csv.csv" and delete all help files
     def join_files(self, arr):
         with open("merged_csv.csv", "a") as merged_files:
             merged_files.write(",".join(self.header_names) + "\n")
@@ -66,10 +65,14 @@ class Join_csv:
                     merged_files.write(f.read())
                 os.remove(file)
 
+    # create small files including merged data, returns name of final big file
     def main_function(self):
         data = []
         arr = []
         nr = 0
+
+        # if join type is right join, the solution of the task is very similar to leftjoin, to solve it
+        # we can just swap first file with second one
         if self.join_type == "rightjoin":
             self.filename1, self.filename2 = self.filename2, self.filename1
 
@@ -77,20 +80,29 @@ class Join_csv:
         inner_index_first, inner_index_second = self.inner_header_indexes()
         self.header_names, left = self.header_and_left(inner_index_first, inner_index_second)
 
+        # file can be big so I am considering data partially
+        # when I consider one part from first file, I iterate via all parts of second file
         for first_file in pd.read_csv(self.filename1, chunksize=self.BIG_NUMBER):
             data1 = first_file.iloc[:, first_index].values
             data1_set = set(first_file.iloc[:, first_index].values)
             for second_file in pd.read_csv(self.filename2, chunksize=self.BIG_NUMBER):
                 data2_set = set(second_file.iloc[:, second_index].values)
+
+                # this set includes all data from column name that is present in both files in this column
                 inner_data_set = data1_set & data2_set
+                data1_set.clear()
                 data2_set.clear()
+
+                # in data1 and data2 there are values from "the column"
+                # I used sets to accelerate this task, lists are needed due to need of order in the next part
                 data2 = second_file.iloc[:, second_index].values
 
-                i = -1
-                j = -1
 
+                # if join type is not inner we are doing the same for both cases, leftjoin and rightjoin due to possible swap in 76 line
+                # new entries created by joining rows in first and second file are saved to array (lower explanation extended)
                 if self.join_type != "inner":
                     ll = len(left)
+                    # we iterate through all the values from one file and if row is not in second file we fill missing columns with "None"
                     for element in first_file.iloc[:, 1:].values:
                         el = element[first_index-1]
                         if el not in inner_data_set:
@@ -98,6 +110,7 @@ class Join_csv:
                             new_data = np.concatenate((element, data11))
                             data.append(new_data)
                         else:
+                            # if the column is common if both files we concatenate data from first and second file
                             for ind, f2 in enumerate(data2):
                                 if f2 == el:
                                     j = ind
@@ -107,6 +120,10 @@ class Join_csv:
                             new_data = np.concatenate((element, row2))
                             data.append(new_data)
                 else:
+                    # if join type is inner we interate via common inner values, find indexes of rows where are that values in
+                    # files and join rows
+                    i = -1
+                    j = -1
                     for element in inner_data_set:
                         for ind, f1 in enumerate(data1):
                             if f1 == element:
@@ -126,6 +143,8 @@ class Join_csv:
                 del data2
             del data1
 
+            # every entry of new data is saved in array, if the length of array is bigger than specified number, the memory becomes
+            # free by saving data to new file in computer
             if len(data) > self.BIG_NUMBER:
                 df = pd.DataFrame(data=data, columns=self.header_names)
                 file = "help_file" + str(nr) + ".csv"
