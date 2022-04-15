@@ -5,10 +5,10 @@ from sys import argv
 
 
 class Join_csv:
-    def __init__(self, filename1, filename2, column_name, join_type="inner"):
+    def __init__(self, filename1, filename2, column_name, join_type=None):
         assert os.path.isfile(filename1)
         assert os.path.isfile(filename2)
-        assert join_type in ["inner", "rightjoin", "leftjoin"]
+        assert not join_type or join_type in ["inner", "rightjoin", "leftjoin"]
         self.filename1 = filename1
         self.filename2 = filename2
         self.column_name = column_name
@@ -121,6 +121,14 @@ class Join_csv:
                             row2 = second_file.iloc[j, left].values
                             new_data = np.concatenate((element, row2))
                             data.append(new_data)
+                    if not self.join_type:
+                        nn = len(self.header_names)-len(self.header_second)
+                        for element in second_file.iloc[:, 1:].values:
+                            el = element[second_index-1]
+                            if el not in inner_data_set:
+                                ar = ["None" for _ in range(nn)]
+                                new_data = np.concatenate((ar, element))
+                                data.append(new_data)
                 else:
                     # if join type is inner we interate via common inner values, find indexes of rows where are that values in
                     # files and join rows
@@ -165,5 +173,10 @@ class Join_csv:
 
 
 if __name__ == '__main__':
-    jcsv = Join_csv(argv[1], argv[2], argv[3], argv[4])
+    assert 3<len(argv)<6
+    if len(argv)==5:
+        jcsv = Join_csv(argv[1], argv[2], argv[3], argv[4])
+    else:
+        jcsv = Join_csv(argv[1], argv[2], argv[3])
+
     jcsv.main_function()
